@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wind Dashboard – Saraphi Technical</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -27,15 +28,67 @@ body.dark{
 }
 
 html, body{
-    height:100%;
-    overflow:hidden;
     font-family:'Segoe UI', sans-serif;
     background:var(--bg);
     color:var(--text);
     transition:background 0.3s, color 0.3s;
+    min-height:100%;
 }
 
-body{ display:flex; flex-direction:column; }
+/* =====================
+   DESKTOP: ไม่ scroll
+   ===================== */
+@media (min-width: 769px){
+    html, body{
+        height:100%;
+        overflow:hidden;
+    }
+    body{ display:flex; flex-direction:column; }
+    .dashboard{
+        flex:1;
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        grid-template-rows:1fr 1fr;
+        gap:10px;
+        padding:10px;
+        min-height:0;
+    }
+    .card{ min-height:0; }
+    .chart-wrap{ flex:1; position:relative; min-height:0; }
+}
+
+/* =====================
+   MOBILE: เลื่อนได้ 3 ชั้น
+   ===================== */
+@media (max-width: 768px){
+    html, body{
+        overflow-y:auto;
+    }
+    .header{
+        flex-direction:column;
+        align-items:flex-start !important;
+        gap:8px;
+        padding:10px 14px !important;
+    }
+    .header-right{
+        width:100%;
+        flex-wrap:wrap;
+        gap:8px !important;
+    }
+    .wind-display{ font-size:13px !important; }
+    .wind-display b{ font-size:17px !important; }
+    .dashboard{
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        padding:10px;
+    }
+    .card.full{ grid-column:unset; }
+    .chart-wrap{
+        position:relative;
+        height:200px;   /* fixed height บนมือถือ */
+    }
+}
 
 /* ===== HEADER ===== */
 .header{
@@ -81,17 +134,7 @@ body{ display:flex; flex-direction:column; }
     border:none;
 }
 
-/* ===== DASHBOARD ===== */
-.dashboard{
-    flex:1;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    grid-template-rows:1fr 1fr;
-    gap:10px;
-    padding:10px;
-    min-height:0;
-}
-
+/* ===== CARD ===== */
 .card{
     background:var(--card);
     border-radius:12px;
@@ -99,7 +142,6 @@ body{ display:flex; flex-direction:column; }
     padding:8px 10px;
     display:flex;
     flex-direction:column;
-    min-height:0;
     transition:background 0.3s;
 }
 .card.full{ grid-column:span 2; }
@@ -114,13 +156,7 @@ body{ display:flex; flex-direction:column; }
 .card h3{ font-size:12px; font-weight:600; color:var(--text); }
 .card .unit{ font-size:11px; color:var(--subtext); }
 
-.chart-wrap{
-    flex:1;
-    position:relative;
-    min-height:0;
-}
-
-/* ===== CONNECTION STATUS (ใต้กราฟ 7 วัน) ===== */
+/* ===== CONNECTION STATUS ===== */
 .conn-bar{
     flex-shrink:0;
     margin-top:6px;
@@ -130,6 +166,7 @@ body{ display:flex; flex-direction:column; }
     align-items:center;
     justify-content:center;
     gap:10px;
+    flex-wrap:wrap;
 }
 
 .conn-label{
@@ -137,7 +174,6 @@ body{ display:flex; flex-direction:column; }
     font-weight:700;
     letter-spacing:0.3px;
 }
-
 .conn-label.ok  { color:#16a34a; }
 .conn-label.fail{ color:#dc2626; }
 
@@ -185,7 +221,7 @@ body{ display:flex; flex-direction:column; }
 
 <div class="dashboard">
 
-    <!-- กราฟซ้ายบน: 24 ชั่วโมง -->
+    <!-- กราฟ 1: 24 ชั่วโมง -->
     <div class="card">
         <div class="card-header">
             <h3>สถิติรายชั่วโมง (24 ชั่วโมงล่าสุด)</h3>
@@ -194,7 +230,7 @@ body{ display:flex; flex-direction:column; }
         <div class="chart-wrap"><canvas id="chart24"></canvas></div>
     </div>
 
-    <!-- กราฟขวาบน: 5 นาที realtime -->
+    <!-- กราฟ 2: 5 นาที realtime -->
     <div class="card">
         <div class="card-header">
             <h3>ค่าปัจจุบันแบบเรียลไทม์ (5 นาทีล่าสุด)</h3>
@@ -203,15 +239,13 @@ body{ display:flex; flex-direction:column; }
         <div class="chart-wrap"><canvas id="chart5m"></canvas></div>
     </div>
 
-    <!-- กราฟล่าง: 7 วัน + สถานะ -->
+    <!-- กราฟ 3: 7 วัน + สถานะ -->
     <div class="card full">
         <div class="card-header">
             <h3>สถิติสูงสุดรายวัน (ย้อนหลัง 1 สัปดาห์)</h3>
             <span class="unit">m/s · max/day</span>
         </div>
         <div class="chart-wrap"><canvas id="chart7d"></canvas></div>
-
-        <!-- สถานะใต้กราฟ -->
         <div class="conn-bar">
             <div class="conn-dot" id="connDot"></div>
             <span class="conn-title">สถานการณ์ทำงาน :</span>
@@ -243,7 +277,7 @@ function mkChart(id, color, extraOpts = {}){
                 tension:0.3,
                 fill:true,
                 pointRadius:3,
-                spanGaps: false   // ช่วงที่เป็น null จะขาด, แต่เราจะใส่ 0 แทนทุกช่อง
+                spanGaps:false
             }]
         },
         options:{
@@ -265,20 +299,14 @@ function mkChart(id, color, extraOpts = {}){
                         maxTicksLimit: extraOpts.maxTicks || 12
                     }
                 }
-            },
-            ...extraOpts.options
+            }
         }
     });
 }
 
-// กราฟ 24 ชม. → label: H.00  (เช่น 0.00, 1.00 ... 23.00)
-const c24 = mkChart('chart24', 'rgba(59,130,246,1)', { maxTicks:12 });
-
-// กราฟ 5 นาที → 5 จุด, label: HH.MM  (เช่น 16.01, 16.02 ...)
-const c5m = mkChart('chart5m', 'rgba(16,185,129,1)', { maxTicks:10 });
-
-// กราฟ 7 วัน
-const c7d = mkChart('chart7d', 'rgba(245,158,11,1)', { maxTicks:7 });
+const c24 = mkChart('chart24', 'rgba(59,130,246,1)',  { maxTicks:12 });
+const c5m = mkChart('chart5m', 'rgba(16,185,129,1)',  { maxTicks:10 });
+const c7d = mkChart('chart7d', 'rgba(245,158,11,1)',  { maxTicks:7  });
 
 function applyChart(chart, labels, data){
     chart.data.labels           = labels;
@@ -286,11 +314,11 @@ function applyChart(chart, labels, data){
     chart.update();
 }
 
-/* ===== FILL TIMELINE – ทุกช่องที่ไม่มีข้อมูล = 0 (เส้นลงมาที่ 0) ===== */
+/* ===== FILL TIMELINE – ไม่มีข้อมูล = 0 ===== */
 function fillTimeline(feeds, slotMs, totalSlots){
     const now   = Date.now();
     const start = now - (totalSlots - 1) * slotMs;
-    const slots = new Array(totalSlots).fill(0);  // เริ่มด้วย 0 ทุกช่อง
+    const slots = new Array(totalSlots).fill(0);
 
     feeds.forEach(f => {
         const t   = new Date(f.created_at).getTime();
@@ -305,15 +333,7 @@ function fillTimeline(feeds, slotMs, totalSlots){
     return { slots, times };
 }
 
-/* ===== FORMAT TIME ===== */
-// HH.MM (ใช้จุดแทนโคลอน)
-function fmtHM(t){
-    return `${String(t.getHours()).padStart(2,'0')}.${String(t.getMinutes()).padStart(2,'0')}`;
-}
-// H.00 สำหรับ 24 ชม.
-function fmtH(t){
-    return `${t.getHours()}.00`;
-}
+function fmtH(t){ return `${t.getHours()}.00`; }
 
 /* ===== WIND BADGE ===== */
 function updateBadge(val){
@@ -330,7 +350,6 @@ function setConn(ok, timeStr){
     const dot = document.getElementById('connDot');
     const lbl = document.getElementById('connLabel');
     const ls  = document.getElementById('lastSeen');
-
     if(ok){
         dot.className = 'conn-dot';
         lbl.className = 'conn-label ok';
@@ -344,29 +363,19 @@ function setConn(ok, timeStr){
     }
 }
 
-/* ===========================
-   FETCH: 5 MIN
-   5 slots × 1 นาที = 5 นาที
-   label: HH.MM  (16.01, 16.02 ...)
-   refresh ทุก 15 วินาที
-   =========================== */
+/* ===== FETCH 5M ===== */
 async function fetch5m(){
     try {
-        const url   = `${BASE}/feeds.json?api_key=${RKEY}&minutes=5&results=8000`;
-        const res   = await fetch(url);
+        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&minutes=5&results=8000`);
         const json  = await res.json();
         const feeds = (json.feeds || []).filter(f => f[FIELD] !== null && f[FIELD] !== '');
 
-        const SLOT  = 30 * 1000; // 30 วินาที → 10 slots = 5 นาที
-        const TOTAL = 10;
-        const { slots, times } = fillTimeline(feeds, SLOT, TOTAL);
-
+        const { slots, times } = fillTimeline(feeds, 30000, 10);
         const labels = times.map(t =>
             `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`
         );
         applyChart(c5m, labels, slots);
 
-        // badge + connection
         if(feeds.length > 0){
             const last   = feeds[feeds.length - 1];
             const lastDt = new Date(last.created_at);
@@ -375,57 +384,38 @@ async function fetch5m(){
             updateBadge(ok ? parseFloat(last[FIELD]) : null);
             setConn(ok, lastDt.toLocaleTimeString('th-TH'));
         } else {
-            updateBadge(null);
-            setConn(false, null);
+            updateBadge(null); setConn(false, null);
         }
     } catch(e){
-        console.error('5m error', e);
-        setConn(false, null);
-        updateBadge(null);
+        setConn(false, null); updateBadge(null);
     }
 }
 
-/* ===========================
-   FETCH: 24H
-   24 slots × 1 ชั่วโมง
-   label: H.00  (0.00, 1.00 ...)
-   =========================== */
+/* ===== FETCH 24H ===== */
 async function fetch24h(){
     try {
-        const url   = `${BASE}/feeds.json?api_key=${RKEY}&minutes=1440&results=8000`;
-        const res   = await fetch(url);
+        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&minutes=1440&results=8000`);
         const json  = await res.json();
         const feeds = (json.feeds || []).filter(f => f[FIELD] !== null && f[FIELD] !== '');
-
         const { slots, times } = fillTimeline(feeds, 3600000, 24);
-        const labels = times.map(t => fmtH(t));
-        applyChart(c24, labels, slots);
-    } catch(e){ console.error('24h error', e); }
+        applyChart(c24, times.map(t => fmtH(t)), slots);
+    } catch(e){ console.error(e); }
 }
 
-/* ===========================
-   FETCH: 7 วัน
-   7 slots × 1 วัน
-   =========================== */
+/* ===== FETCH 7D ===== */
 async function fetch7d(){
     try {
-        const url   = `${BASE}/feeds.json?api_key=${RKEY}&days=7&results=8000`;
-        const res   = await fetch(url);
+        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&days=7&results=8000`);
         const json  = await res.json();
         const feeds = (json.feeds || []).filter(f => f[FIELD] !== null && f[FIELD] !== '');
-
         const { slots, times } = fillTimeline(feeds, 86400000, 7);
         const DAY = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-        const labels = times.map(t => `${DAY[t.getDay()]} ${t.getDate()}/${t.getMonth()+1}`);
-        applyChart(c7d, labels, slots);
-    } catch(e){ console.error('7d error', e); }
+        applyChart(c7d, times.map(t => `${DAY[t.getDay()]} ${t.getDate()}/${t.getMonth()+1}`), slots);
+    } catch(e){ console.error(e); }
 }
 
 /* ===== START ===== */
-fetch5m();
-fetch24h();
-fetch7d();
-
+fetch5m(); fetch24h(); fetch7d();
 setInterval(fetch5m,  15 * 1000);
 setInterval(fetch24h,  5 * 60 * 1000);
 setInterval(fetch7d,  30 * 60 * 1000);
